@@ -4,7 +4,10 @@
 /repo
 # Scratch/verification dirs. Also keeps flatpak-builder's `type: dir, path: .`
 # from copying them into the build.
-/dev
+/dev/*
+# ...except the GitHub mirror script, which the NAS should back up. It
+# filters dev/ out itself, so it never reaches GitHub.
+!/dev/push-github.sh
 
 # --- NAS backup: build output, caches and temp files ---
 /target/
