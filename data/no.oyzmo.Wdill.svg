@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dce6da"/>
+      <stop offset="1" stop-color="#a8c0a3"/>
+    </linearGradient>
+    <linearGradient id="left" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7fa07a"/>
+      <stop offset="1" stop-color="#6e8c6a"/>
+    </linearGradient>
+    <linearGradient id="right" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a7355"/>
+      <stop offset="1" stop-color="#41563e"/>
+    </linearGradient>
+  </defs>
+  <!-- ground shadow -->
+  <ellipse cx="64" cy="116" rx="46" ry="7" fill="#4a3428" opacity="0.22"/>
+  <!-- isometric cube -->
+  <g stroke-linejoin="round">
+    <polygon points="64,12 114,39 64,66 14,39" fill="url(#top)"/>
+    <polygon points="14,39 64,66 64,117 14,90" fill="url(#left)"/>
+    <polygon points="114,39 64,66 64,117 114,90" fill="url(#right)"/>
+  </g>
+  <!-- edge highlights -->
+  <polygon points="64,12 114,39 64,66 14,39" fill="none" stroke="#f4e7d3" stroke-opacity="0.45" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M 64 66 L 64 117" stroke="#4a3428" stroke-opacity="0.55" stroke-width="2"/>
+  <path d="M 14 39 L 14 90 M 114 39 L 114 90" stroke="#f4e7d3" stroke-opacity="0.18" stroke-width="2"/>
+</svg>

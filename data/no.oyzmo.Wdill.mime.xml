@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- shared-mime-info has no type for FBX, so without this .fbx files are
+     application/octet-stream (binary) or text/plain (ASCII) and neither the
+     desktop entry nor the thumbnailer can claim them. GLB already has
+     model/gltf-binary upstream. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.autodesk.fbx">
+    <comment>Autodesk FBX 3D model</comment>
+    <generic-icon name="model"/>
+    <magic priority="80">
+      <match type="string" offset="0" value="Kaydara FBX Binary"/>
+    </magic>
+    <glob pattern="*.fbx"/>
+  </mime-type>
+</mime-info>

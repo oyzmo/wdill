@@ -1,0 +1,4 @@
+[Thumbnailer Entry]
+TryExec=@BINDIR@/wdill
+Exec=@BINDIR@/wdill --thumbnail %i %o %s
+MimeType=model/stl;model/x-stl-ascii;model/x-stl-binary;application/sla;model/3mf;application/vnd.ms-3mfdocument;model/obj;model/step;application/step;application/x-step;model/step+xml;model/gltf-binary;application/vnd.autodesk.fbx;

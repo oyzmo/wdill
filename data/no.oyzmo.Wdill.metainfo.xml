@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2026 oyzmo — SPDX-License-Identifier: GPL-3.0-or-later -->
+<component type="desktop-application">
+  <id>no.oyzmo.Wdill</id>
+
+  <!-- The licence of wdill itself, and of this metadata file. This is where
+       GNOME Software and the Flatpak tooling read the licensing from, so it
+       must stay in step with LICENSE and Cargo.toml's `license` field.
+       No <releases> block on purpose: Cargo.toml is the one place the version
+       number lives. -->
+  <project_license>GPL-3.0-or-later</project_license>
+  <metadata_license>CC0-1.0</metadata_license>
+
+  <name>wdill</name>
+  <summary>Tiny 3D print file viewer</summary>
+  <developer id="no.oyzmo">
+    <name>oyzmo</name>
+  </developer>
+
+  <description>
+    <p>
+      What does it look like? wdill opens 3D print files and shows you the
+      model: STL (binary and ASCII), 3MF, OBJ, STEP, GLB and FBX.
+    </p>
+    <p>
+      Files load on a background thread with a progress bar, so large models
+      never freeze the window, and rendering is a multithreaded software
+      rasterizer — meshes with hundreds of thousands of triangles rotate
+      smoothly with no GPU driver requirements.
+    </p>
+  </description>
+
+  <!-- GPLv3 §6(d): the corresponding source is offered from the same place as
+       the binaries, as wdill-<version>-src.zip. -->
+  <url type="homepage">http://oyzmo.no/</url>
+
+  <launchable type="desktop-id">no.oyzmo.Wdill.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+
+  <categories>
+    <category>Graphics</category>
+    <category>Viewer</category>
+  </categories>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+</component>

@@ -1,0 +1,45 @@
+app-id: no.oyzmo.Wdill
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: wdill
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  - --filesystem=home:ro   # open files passed by CLI/drag-and-drop
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/wdill/cargo
+  # Simple route: allow network during build so cargo can fetch crates.
+  # For a fully offline build, generate cargo-sources.json with
+  # flatpak-cargo-generator.py from Cargo.lock and add it to sources instead.
+  build-args:
+    - --share=network
+modules:
+  - name: wdill
+    buildsystem: simple
+    build-commands:
+      - cargo build --release
+      - install -Dm755 target/release/wdill /app/bin/wdill
+      - install -Dm644 data/no.oyzmo.Wdill.svg /app/share/icons/hicolor/scalable/apps/no.oyzmo.Wdill.svg
+      - sed 's|@BINDIR@/||' data/no.oyzmo.Wdill.desktop.in > no.oyzmo.Wdill.desktop
+      - install -Dm644 no.oyzmo.Wdill.desktop /app/share/applications/no.oyzmo.Wdill.desktop
+      # FBX has no shared-mime-info type; Flatpak exports this one to the host.
+      - install -Dm644 data/no.oyzmo.Wdill.mime.xml /app/share/mime/packages/$FLATPAK_ID.xml
+      # AppStream metadata: where GNOME Software and the Flatpak tooling read
+      # the licence (<project_license>GPL-3.0-or-later</project_license>) from.
+      - install -Dm644 data/no.oyzmo.Wdill.metainfo.xml /app/share/metainfo/$FLATPAK_ID.metainfo.xml
+      # wdill is GPLv3-or-later: the full licence text and the third-party
+      # attribution notices must be conveyed with the binary, so they ship
+      # inside the bundle. Users get the corresponding source separately, as
+      # the wdill-<version>-src.zip built by source.sh (see README).
+      - install -Dm644 LICENSE /app/share/licenses/$FLATPAK_ID/LICENSE
+      - install -Dm644 THIRD-PARTY.md /app/share/licenses/$FLATPAK_ID/THIRD-PARTY.md
+    sources:
+      - type: dir
+        path: .
