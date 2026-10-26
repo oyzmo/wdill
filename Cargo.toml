@@ -1,6 +1,6 @@
 [package]
 name = "wdill"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 description = "A tiny 3D printfile viewer for GNOME (.stl, .3mf, .obj, .step, .glb, .fbx)"
 license = "GPL-3.0-or-later"

@@ -18,8 +18,10 @@
 #       Removes the app install; also removes the thumbnailer install if run
 #       with sudo (skipped with a note otherwise).
 #
-# The menu re-runs itself under sudo (via exec) for whichever single action
-# needs root, so you never have to know in advance which one that is.
+# The menu re-runs itself under sudo for whichever single action needs root,
+# so you never have to know in advance which one that is. Its Release section
+# (bump, distribution, flatpak.oyzmo.no, GitHub) has subcommands too; run
+# without arguments to see them.
 set -euo pipefail
 
 APP_ID="no.oyzmo.Wdill"
@@ -224,36 +226,159 @@ do_uninstall() {
     fi
 }
 
-# Re-exec this same script under sudo for one subcommand, preserving PREFIX
-# if the caller set it. Used by the menu so the user doesn't need to know in
-# advance which choice needs root.
+# ---------------------------------------------------------------- release
+# The same release steps, numbers and order as Bindle's bindle.sh.
+
+FLATPAK_SITE="${FLATPAK_SITE:-/mnt/mycode/flatpak}"
+
+current_version() {
+    sed -n 's/^version *= *"\([^"]*\)".*/\1/p' "$HERE/Cargo.toml" | head -1
+}
+
+# bump.sh plus a commit of just the files it touches, so the release steps
+# after it (which clone main) see the new version.
+bump_version() {
+    local level notes=() note
+    echo "Now at $(current_version)."
+    read -rp "Bump which part? [p]atch (fixes) / [m]inor (features) / ma[j]or: " level
+    case "$level" in
+        p|P|patch) level=patch ;;
+        m|M|minor) level=minor ;;
+        j|J|major) level=major ;;
+        *) echo "Cancelled."; return 0 ;;
+    esac
+    echo "What changed? One short line per note; an empty line ends."
+    while read -rp "  note: " note && [ -n "$note" ]; do
+        notes+=("$note")
+    done
+    [ ${#notes[@]} -gt 0 ] || { echo "At least one note is needed." >&2; return 1; }
+    "$HERE/bump.sh" "$level" "${notes[@]}"
+    git -C "$HERE" commit -q -m "wdill $(current_version)" -- \
+        Cargo.toml Cargo.lock "data/$APP_ID.metainfo.xml"
+    echo "Committed wdill $(current_version)."
+}
+
+# Everything a release consists of, in dist/: the manual-install zip and the
+# Flatpak bundle (each also builds the source zip; buildflatpak.sh publishes
+# into the Flatpak site).
+make_distribution() {
+    "$HERE/package.sh"
+    "$HERE/buildflatpak.sh"
+    echo
+    echo "dist/ now holds, for $(current_version):"
+    ls -lh "$HERE/dist" | grep -F -- "-$(current_version)-" | sed 's/^/  /'
+}
+
+publish_flatpak() {
+    [ -x "$FLATPAK_SITE/tools/push.sh" ] || { echo "No Flatpak site at $FLATPAK_SITE." >&2; return 1; }
+    "$FLATPAK_SITE/tools/push.sh"
+}
+
+release_github() {
+    echo "Pushing main to GitHub…"
+    "$HERE/dev/push-github.sh"
+    "$HERE/dev/release-github.sh"
+}
+
+# Everything after the bump: dist/, NAS backup, flatpak.oyzmo.no, GitHub.
+full_release() {
+    if ! git -C "$HERE" diff --quiet HEAD; then
+        echo "There are uncommitted changes — commit them first, a release is built from main." >&2
+        return 1
+    fi
+    echo "Full release of wdill $(current_version)"
+    make_distribution
+    echo "Backing up to the NAS…"
+    git -C "$HERE" push -q nas main || echo "NAS push failed — continuing." >&2
+    publish_flatpak || echo "flatpak.oyzmo.no was not updated." >&2
+    release_github || echo "The GitHub release failed (see above)." >&2
+}
+
+backup_key() {
+    "$FLATPAK_SITE/tools/backup-key.sh"
+}
+
+# Swap an installed wdill flatpak for the newest bundle in dist/. GNOME
+# Software only offers "Open" for a bundle of an app that is already
+# installed. Uninstalling keeps the app's data (~/.var/app/$APP_ID).
+reinstall_flatpak() {
+    local bundle scope found=() version
+    bundle="$(ls "$HERE"/dist/wdill-*-"$(uname -m)".flatpak 2>/dev/null | sort -V | tail -1)"
+    [ -n "$bundle" ] || { echo "No wdill-*.flatpak in dist/ — make one with option 7 first." >&2; return 1; }
+    for scope in user system; do
+        if flatpak info --"$scope" "$APP_ID" >/dev/null 2>&1; then
+            version="$(flatpak info --"$scope" "$APP_ID" | sed -n 's/^ *Version: //p')"
+            found+=("$scope")
+            echo "  Installed ($scope): ${version:-unknown version}"
+        fi
+    done
+    [ ${#found[@]} -eq 0 ] && echo "  Not installed yet."
+    echo "  New:  $(basename "$bundle")"
+    read -rp "Uninstall the old and install this one? [y/N] " answer
+    [[ "$answer" == [yY]* ]] || { echo "Cancelled."; return 0; }
+    for scope in ${found[@]+"${found[@]}"}; do
+        flatpak uninstall --"$scope" -y --noninteractive "$APP_ID"
+    done
+    scope=user
+    [ ${#found[@]} -eq 1 ] && scope="${found[0]}"
+    flatpak install --"$scope" -y --noninteractive "$bundle"
+    echo "Installed $(flatpak info --"$scope" "$APP_ID" | sed -n 's/^ *Version: //p')."
+}
+
+cleanup_build() {
+    rm -rf "$HERE/build-dir" "$HERE/repo" "$HERE/.flatpak-builder"
+    as_builder "cargo clean --manifest-path '$HERE/Cargo.toml'"
+    echo "Removed build-dir/, repo/, .flatpak-builder/ and the cargo build. dist/ is kept."
+}
+
+# ------------------------------------------------------------------ menu
+bold() { printf '\033[1m%s\033[0m\n' "$*"; }
+
+# Each choice runs this script again with its subcommand, so a failing step
+# (set -e) ends that step only, not the menu. Root-only steps go through sudo,
+# keeping PREFIX if the caller set it.
+run_step() {
+    "$0" "$1" || printf '\033[31m✘ That step failed (see above).\033[0m\n'
+}
 run_privileged() {
-    exec sudo env ${PREFIX:+"PREFIX=$PREFIX"} "$0" "$1"
+    sudo env ${PREFIX:+"PREFIX=$PREFIX"} "$0" "$1" || printf '\033[31m✘ That step failed (see above).\033[0m\n'
 }
 
 show_menu() {
-    echo "wdill install helper"
-    echo
-    PS3=$'\nChoose an option: '
-    local options=(
-        "Install app (GNOME app grid, no root)"
-        "Install thumbnails support (Nautilus previews, needs root)"
-        "Uninstall everything (needs root to fully clean up)"
-        "Quit"
-    )
-    select _ in "${options[@]}"; do
-        case "$REPLY" in
-            1) install_app; break ;;
-            2)
-                if [ "$(id -u)" -eq 0 ]; then install_thumbnails; else run_privileged thumbnails; fi
-                break
-                ;;
-            3)
-                if [ "$(id -u)" -eq 0 ]; then do_uninstall; else run_privileged uninstall; fi
-                break
-                ;;
-            4) exit 0 ;;
-            *) echo "Invalid choice." ;;
+    while true; do
+        echo
+        bold "── wdill $(current_version) ─────────────────────────"
+        echo "  1) Compile"
+        echo "  2) Install on this GNOME desktop (no root)"
+        echo "  3) Install thumbnail support (Nautilus previews, needs root)"
+        echo "  4) Uninstall everything (needs root to fully clean up)"
+        echo "  8) Cleanup (delete temporary build files)"
+        echo " 10) Replace installed flatpak with the newest one (from dist/)"
+        bold "── Release (in this order) ──────────────"
+        echo " 11) Bump version (asks for notes, commits)"
+        echo " 13) Full release: 7 → NAS → 12 → 9 in one go"
+        echo "     or step by step:"
+        echo "  7)   Make distribution (zip + flatpak + source → dist/ and the Flatpak site)"
+        echo " 12)   Publish flatpak updates (flatpak.oyzmo.no → GNOME Software)"
+        echo "  9)   Release newest version on GitHub (from dist/)"
+        echo " 14) Back up the flatpak signing key to the NAS (after the key changes)"
+        echo "  q) Quit"
+        read -rp "Choose: " choice
+        case "$choice" in
+            1) run_step compile ;;
+            2) run_step install ;;
+            3) if [ "$(id -u)" -eq 0 ]; then run_step thumbnails; else run_privileged thumbnails; fi ;;
+            4) if [ "$(id -u)" -eq 0 ]; then run_step uninstall; else run_privileged uninstall; fi ;;
+            7) run_step dist ;;
+            8) run_step cleanup ;;
+            9) run_step release-github ;;
+            10) run_step reinstall-flatpak ;;
+            11) run_step bump ;;
+            12) run_step publish-flatpak ;;
+            13) run_step full-release ;;
+            14) run_step backup-key ;;
+            q|Q) exit 0 ;;
+            *) echo "Unknown choice." ;;
         esac
     done
 }
@@ -263,9 +388,18 @@ case "${1:-}" in
     install)    install_app ;;
     thumbnails) install_thumbnails ;;
     uninstall)  do_uninstall ;;
+    dist)               make_distribution ;;
+    cleanup)            cleanup_build ;;
+    release-github)     release_github ;;
+    reinstall-flatpak)  reinstall_flatpak ;;
+    bump)               bump_version ;;
+    publish-flatpak)    publish_flatpak ;;
+    full-release)       full_release ;;
+    backup-key)         backup_key ;;
     "")         show_menu ;;
     *)
-        echo "Usage: $0 {install|thumbnails|uninstall}" >&2
+        echo "Usage: $0 {install|thumbnails|uninstall|compile|cleanup|reinstall-flatpak}" >&2
+        echo "       $0 {bump|dist|publish-flatpak|release-github|full-release|backup-key}" >&2
         echo "  (no argument) — interactive menu" >&2
         echo "  install     — app + GNOME app grid entry (per-user, no root; PREFIX default ~/.local)" >&2
         echo "  thumbnails  — Nautilus preview thumbnails (needs root; PREFIX default /usr/local)" >&2

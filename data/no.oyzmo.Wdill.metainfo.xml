@@ -5,9 +5,7 @@
 
   <!-- The licence of wdill itself, and of this metadata file. This is where
        GNOME Software and the Flatpak tooling read the licensing from, so it
-       must stay in step with LICENSE and Cargo.toml's `license` field.
-       No <releases> block on purpose: Cargo.toml is the one place the version
-       number lives. -->
+       must stay in step with LICENSE and Cargo.toml's `license` field. -->
   <project_license>GPL-3.0-or-later</project_license>
   <metadata_license>CC0-1.0</metadata_license>
 
@@ -46,4 +44,14 @@
     <control>pointing</control>
     <control>keyboard</control>
   </supports>
+
+  <!-- Written by bump.sh, never by hand: Cargo.toml stays the one place the
+       version is set. GNOME Software shows these notes with each update. -->
+  <releases>
+    <release version="0.4.1" date="2026-10-26">
+      <description>
+        <p>Flatpak installs now get updates from flatpak.oyzmo.no, also in GNOME Software</p>
+      </description>
+    </release>
+  </releases>
 </component>

@@ -12,6 +12,16 @@ Rendering is a multithreaded software rasterizer — meshes with hundreds of tho
 - Open a file with the header-bar button (Ctrl+O), by dropping it on the window, or `wdill model.stl`
 - Drag to rotate, scroll to zoom
 
+## Installing (Flatpak)
+
+```sh
+flatpak install https://flatpak.oyzmo.no/wdill.flatpakref
+```
+
+or open that link in GNOME Software. New versions then show up in Software's
+Updates (or with `flatpak update`). The Flatpak can't provide Nautilus
+thumbnails; for those, use the manual-install zip from the GitHub releases.
+
 ## Building and installing
 
 ```sh
@@ -31,6 +41,8 @@ to run as root).
 ./package.sh   # -> dist/wdill-<version>-<arch>.zip  (+ the source zip below)
 ./source.sh    # -> dist/wdill-<version>-src.zip
 ./buildflatpak.sh  # -> dist/wdill-<version>-<arch>.flatpak  (+ the source zip)
+./install.sh       # menu; its Release section bumps, builds all of the above,
+                   # publishes to flatpak.oyzmo.no and makes the GitHub release
 ```
 
 `package.sh` builds a release binary and packs it with the data files, a
