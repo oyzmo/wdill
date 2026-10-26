@@ -229,7 +229,14 @@ do_uninstall() {
 # ---------------------------------------------------------------- release
 # The same release steps, numbers and order as Bindle's bindle.sh.
 
-FLATPAK_SITE="${FLATPAK_SITE:-/mnt/mycode/flatpak}"
+# The oyzmo Flatpak site lives in the root of the shared code folder: that is
+# /mnt/mycode on the VM and ~/Code on the desktop (the same share), told apart
+# by where this script is. FLATPAK_SITE overrides.
+case "$HERE/" in
+    /mnt/mycode/*)   FLATPAK_SITE="${FLATPAK_SITE:-/mnt/mycode/flatpak}" ;;
+    "$HOME"/Code/*)  FLATPAK_SITE="${FLATPAK_SITE:-$HOME/Code/flatpak}" ;;
+    *)               FLATPAK_SITE="${FLATPAK_SITE:-}" ;;
+esac
 
 current_version() {
     sed -n 's/^version *= *"\([^"]*\)".*/\1/p' "$HERE/Cargo.toml" | head -1
@@ -270,7 +277,7 @@ make_distribution() {
 }
 
 publish_flatpak() {
-    [ -x "$FLATPAK_SITE/tools/push.sh" ] || { echo "No Flatpak site at $FLATPAK_SITE." >&2; return 1; }
+    [ -x "$FLATPAK_SITE/tools/push.sh" ] || { echo "No oyzmo Flatpak site here (looked for /mnt/mycode/flatpak or ~/Code/flatpak)." >&2; return 1; }
     "$FLATPAK_SITE/tools/push.sh"
 }
 
@@ -295,6 +302,7 @@ full_release() {
 }
 
 backup_key() {
+    [ -x "$FLATPAK_SITE/tools/backup-key.sh" ] || { echo "No oyzmo Flatpak site here." >&2; return 1; }
     "$FLATPAK_SITE/tools/backup-key.sh"
 }
 
